@@ -1,39 +1,43 @@
-using LegaciesPrintersApi.Models;
 using Microsoft.EntityFrameworkCore;
+using LegaciesPrintersApi.Data;
+using LegaciesPrintersApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register controllers and Swagger
+// Add Controllers and Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Connect to SQL Server
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Configure SQL Server Connection
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Server=localhost;Database=LegaciesScreenPrintersDb;Trusted_Connection=True;TrustServerCertificate=True;";
 
-// Permissive CORS for Android phone and Web Dashboard
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+// Add CORS so Android Emulator / Local devices can connect
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
+    {
         policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader());
+              .AllowAnyHeader();
+    });
 });
 
 var app = builder.Build();
 
-// Enable Swagger UI in all environments for testing
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Legacies Printers API v1");
-    c.RoutePrefix = string.Empty; // Serves Swagger directly at the root URL
+    c.RoutePrefix = "swagger";
 });
 
-// IMPORTANT: Do NOT include app.UseHttpsRedirection() when running on HTTP
-
 app.UseCors("AllowAll");
+app.UseAuthorization();
 app.MapControllers();
 
-app.Run("http://0.0.0.0:5000");
+app.Run();
