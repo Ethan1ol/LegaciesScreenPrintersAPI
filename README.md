@@ -1,65 +1,85 @@
-# Legacies Screen Printers – Backend API
+# Legacies Screen Printers API
 
-The robust C# backend Web API service for **Legacy Screen Printers**, built using **ASP.NET Core** and connected to a Microsoft SQL Server database. This service acts as the core backend engine handling client authentication, order placement, production tracking, and database querying for the companion Kotlin Android application.
+A RESTful backend service built with ASP.NET Core and Entity Framework Core to support screen-printing orders, customer management, inventory/materials, and live order tracking for the Legacies Screen Printers mobile app.
 
-## 🚀 Key Features
+---
 
-* **RESTful Endpoints:** Provides structured JSON endpoints for user authentication, order submission, and real-time status tracking.
-* **Database Integration:** Utilizes Entity Framework Core to manage relational data models for print jobs, client orders, and system users via SQL Server.
-* **HTTP Request Testing:** Includes native `.http` test files for quick endpoint debugging and verification during local development.
-* **Database Scripting:** Includes dedicated SQL initialization and query scripts (`SQLQuery1.sql`) for manual database setup and data management.
+## 📋 Features
 
-## 🛠️ Technology Stack & Architecture
+- **Authentication & User Management**: User registration and login endpoints with password hashing.
+- **Order Processing & Persistence**: End-to-end creation, status management, and querying of customer orders and item breakdowns.
+- **Real-Time Tracking**: Fast tracking-number lookup endpoint (`/api/orders/track/{trackingNumber}`) for the mobile client.
+- **Materials Inventory**: Querying and updating raw material stock (inks, apparel, vinyl).
+- **Interactive Documentation**: Swagger UI enabled for testing all API routes interactively.
 
-* **Framework:** C#, ASP.NET Core Web API, .NET 8
-* **Database/ORM:** Microsoft SQL Server, Entity Framework Core
-* **Tooling:** Visual Studio / VS Code, REST Client (`.http` files), Git version control
+---
 
-## 📂 Project Structure
+## 🛠️ Prerequisites
 
-```
-LegaciesPrintersApi/
-│
-├── Properties/           # Launch settings and web server configurations
-├── appsettings.json      # Application configuration and SQL connection strings
-├── LegaciesPrintersApi.csproj # .NET project file and NuGet package dependencies
-├── LegaciesPrintersApi.http   # HTTP request test collection for endpoint debugging
-├── Program.cs            # Application entry point, middleware, and dependency injection
-├── SQLQuery1.sql         # Custom database query and setup scripts
-└── WeatherForecast.cs    # Template / boilerplate diagnostic controller model
-```
+- **.NET SDK**: .NET 9.0 SDK or higher installed
+- **Database Engine**: Microsoft SQL Server (LocalDB, SQL Express, or full SQL Server instance)
+- **Tools**: SQL Server Management Studio (SSMS) or Azure Data Studio
 
-## ⚙️ Setup & Local Installation
+---
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/ethan1ol/legacies-screen-printers-api.git
-   ```
+## 🗄️ Database Setup
 
-2. **Open the Project:**
-   Open `LegaciesPrintersApi.csproj` in Visual Studio or Visual Studio Code.
-
-3. **Configure Connection Strings:**
-   Update your database connection string inside `appsettings.json` to point to your SQL Server instance:
+1. Open your SQL Server client (such as SSMS).
+2. Connect to your local SQL Server instance.
+3. Open and run the included `SQLQuery1.sql` script to create the database schema and initialize the tables:
+   - `users`
+   - `materials`
+   - `orders`
+   - `order_items`
+4. Confirm your connection string in `appsettings.json` matches your local SQL Server instance:
    ```json
-   "ConnectionStrings": {
-     "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=LegaciesPrintersDb;Trusted_Connection=True;MultipleActiveResultSets=true"
+   {
+     "ConnectionStrings": {
+       "DefaultConnection": "Server=localhost;Database=LegaciesScreenPrintersDb;Trusted_Connection=True;TrustServerCertificate=True;"
+     }
    }
    ```
 
-4. **Initialize the Database:**
-   Execute the provided initialization script (`SQLQuery1.sql`) in SQL Server Management Studio (SSMS) or run EF migrations if configured:
+---
+
+## 🚀 Running the API
+
+1. Open a terminal in the root directory of this repository:
    ```bash
-   dotnet ef database update
+   dotnet restore
+   dotnet build
    ```
 
-5. **Run the API:**
-   Start the application locally using Visual Studio (`F5`) or via terminal:
+2. Run the application:
    ```bash
    dotnet run
    ```
-   The API will start running on its designated local development port (e.g., `https://localhost:5001` or `http://localhost:5000`).
 
-## 🔗 Connecting with the Mobile App
-If you are running the companion Android application locally, ensure your mobile app's `RetrofitClient.kt` points to this API's base URL (or use an `ngrok` tunnel if testing from a physical mobile device).
+3. By default, the API will listen on `http://localhost:5000`.
+4. Access the Swagger documentation in your browser:
+   ```
+   http://localhost:5000/swagger
+   ```
+
+---
+
+## 📱 Connecting the Android App (`LegaciesScreenPrintersAPK`)
+
+### 1. Android Studio Emulator
+When running the Android application inside an **Android Studio Emulator**, the Android OS routes network requests to your computer's `localhost` via the special IP alias `10.0.2.2`. In `RetrofitClient.kt`:
+```kotlin
+private const val BASE_URL = "http://10.0.2.2:5000/"
 ```
+
+### 2. Physical Mobile Device (Important)
+If you are running the app on a **physical mobile phone** instead of the emulator, `10.0.2.2` will not connect. You must point the app to your development computer's local Wi-Fi/LAN IPv4 address.
+
+In `RetrofitClient.kt`, update the base URL to your PC's local IP address:
+```kotlin
+private const val BASE_URL = "http://192.168.1.50:5000/"
+```
+
+> **Note**:
+> - Replace `192.168.1.50` with your PC's actual IPv4 address (run `ipconfig` in Command Prompt / PowerShell to check).
+> - Make sure both your computer and your phone are connected to the same Wi-Fi network.
+> - Ensure your Windows Firewall allows inbound connections on port `5000`.
