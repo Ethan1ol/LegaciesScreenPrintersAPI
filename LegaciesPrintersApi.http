@@ -1,6 +1,193 @@
-@LegaciesPrintersApi_HostAddress = http://localhost:5148
+# Requests for every endpoint. Run them from Visual Studio / VS Code (REST Client) / Rider.
+# Start the API first with:  dotnet run   (listens on http://localhost:5000)
+# The Android emulator reaches the same API at http://10.0.2.2:5000
 
-GET {{LegaciesPrintersApi_HostAddress}}/weatherforecast/
-Accept: application/json
+@host = http://localhost:5000
+# Tokens from the login requests below (run "Log in" first). REST Client fills these in.
+@customerToken = {{customerLogin.response.body.token}}
+@adminToken = {{adminLogin.response.body.token}}
 
-###
+### Health check
+GET {{host}}/healthz
+
+### ---------- Auth ----------
+
+### Register a customer
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Test Customer",
+  "email": "test.customer@example.com",
+  "phoneNumber": "0821234567",
+  "password": "Password123!"
+}
+
+### Log in (seeded demo customer; password documented in DbSeeder.cs)
+# @name customerLogin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "customer1@example.com",
+  "password": "Password123!"
+}
+
+### Log in as the seeded admin (password from appsettings.Development.json Seed:AdminPassword)
+# @name adminLogin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Admin123!"
+}
+
+### Who am I? (expect 200 with the token, 401 without)
+GET {{host}}/api/auth/me
+Authorization: Bearer {{customerToken}}
+
+### Google sign-in (needs a real ID token from the app or website; forged tokens get 401)
+POST {{host}}/api/auth/google
+Content-Type: application/json
+
+{
+  "idToken": "paste-a-google-id-token-here"
+}
+
+### Log in with a wrong password (expect 401)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "customer1@example.com",
+  "password": "wrong"
+}
+
+### ---------- Users (staff) ----------
+
+### List accounts (staff only)
+GET {{host}}/api/users
+Authorization: Bearer {{adminToken}}
+
+### ---------- Materials ----------
+
+### List materials
+GET {{host}}/api/materials
+
+### Get one material
+GET {{host}}/api/materials/1
+
+### Add a material
+POST {{host}}/api/materials
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "materialName": "Glitter Vinyl",
+  "color": "Rose Gold",
+  "unitPrice": 70.00,
+  "stockQuantity": 40,
+  "unitMeasure": "meters",
+  "lowStockThreshold": 10
+}
+
+### Update a material
+PUT {{host}}/api/materials/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "materialName": "Gloss Vinyl Standard",
+  "color": "Gloss White",
+  "unitPrice": 47.50,
+  "stockQuantity": 120,
+  "unitMeasure": "meters",
+  "lowStockThreshold": 20
+}
+
+### Adjust stock (+50 after a delivery)
+PATCH {{host}}/api/materials/1/stock
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "change": 50
+}
+
+### ---------- Orders ----------
+
+### List all orders (staff only; a customer token gets 403)
+GET {{host}}/api/orders
+Authorization: Bearer {{adminToken}}
+
+### My orders (signed-in customer)
+GET {{host}}/api/orders/mine
+Authorization: Bearer {{customerToken}}
+
+### Get one order by id (owner or staff)
+GET {{host}}/api/orders/1
+Authorization: Bearer {{customerToken}}
+
+### Track by reference (public; name and phone masked unless you are the owner or staff)
+GET {{host}}/api/orders/track/ord5824
+
+### Track an unknown reference (expect 404)
+GET {{host}}/api/orders/track/ORD0000
+
+### Place an order from the app (prices come from the server; the order belongs to the token's user)
+POST {{host}}/api/orders
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "orderType": "mobile",
+  "items": [
+    { "designName": "Team Logo", "materialId": 1, "quantity": 3 },
+    { "designName": "Sponsor Strip", "materialId": 4, "quantity": 2 }
+  ]
+}
+
+### Place a walk-in order for a customer (staff only may set userId)
+POST {{host}}/api/orders
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "orderType": "walk-in",
+  "items": [
+    { "designName": "Shop Window Sign", "materialId": 9, "quantity": 1 }
+  ]
+}
+
+### Order more than is in stock (expect 409)
+POST {{host}}/api/orders
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "items": [
+    { "designName": "Too Big", "materialId": 6, "quantity": 9999 }
+  ]
+}
+
+### Move an order to the next stage
+PUT {{host}}/api/orders/1/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "Screen Printing"
+}
+
+### Invalid status (expect 400 with the allowed list)
+PUT {{host}}/api/orders/1/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "Pending"
+}

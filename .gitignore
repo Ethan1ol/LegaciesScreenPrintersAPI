@@ -1,0 +1,30 @@
+# Build output (never commit compiled binaries)
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+*.nupkg
+
+# IDE / user-specific files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.DotSettings.user
+
+# Local secrets and environment overrides (use dotnet user-secrets or host settings instead)
+appsettings.*.local.json
+*.env
+.env
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# OS files
+.DS_Store
+Thumbs.db
